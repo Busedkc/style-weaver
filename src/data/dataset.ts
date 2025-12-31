@@ -1,52 +1,135 @@
 // Dataset loader for VTON comparison tool
 // Replace mockData imports with this file when you have your dataset ready
 
-import { Garment, Model, GarmentCategory, VTONModelId, mockGarments, mockModels, generateMockResult } from './mockData';
+import { Garment, Model, GarmentCategory, VTONModelId, mockGarments, mockModels, generateMockResult, garmentCategories } from './mockData';
 
 // Dataset configuration
 // Klasör yapınıza göre: garment, model, result
 const DATASET_BASE_PATH = '/dataset';
 
 // Load garments from your dataset
-// Expected structure: public/dataset/garment/{garment_id}.jpg veya {category}/{garment_id}.jpg
+// Expected structure: public/dataset/garment/{category}/{garment_id}.jpg
 export const loadGarments = async (): Promise<Garment[]> => {
-  // Option 1: Load from a manifest.json file (önerilen)
+  const garments: Garment[] = [];
+  
   try {
-    const response = await fetch(`${DATASET_BASE_PATH}/manifest.json`);
+    // First, try to load from manifest.json to get all items
+    const response = await fetch(`${DATASET_BASE_PATH}/garment/manifest.json`);
     if (response.ok) {
-      const data = await response.json();
-      return data.garments || [];
+      const manifest: Record<string, Record<string, string>> = await response.json();
+      
+      // Iterate through each category in the manifest
+      for (const [category, items] of Object.entries(manifest)) {
+        // Iterate through each garment in the category
+        for (const [filename] of Object.entries(items)) {
+          // Extract garment ID from filename (e.g., "anorak_1.jpg" -> "anorak_1")
+          const garmentId = filename.replace('.jpg', '');
+          const garment: Garment = {
+            id: garmentId,
+            name: `${category.charAt(0).toUpperCase() + category.slice(1)} ${garmentId.split('_')[1] || ''}`,
+            category: category,
+            thumbnail: `${DATASET_BASE_PATH}/garment/${category}/${filename}`
+          };
+          garments.push(garment);
+        }
+      }
     }
   } catch (error) {
-    console.warn('manifest.json bulunamadı, alternatif yöntem kullanılacak');
+    console.warn('Garment manifest.json bulunamadı, tüm kategoriler kontrol ediliyor:', error);
   }
-
-  // Option 2: Load from a TypeScript/JSON file
-  // Import your garments data here
-  // Example:
-  // import { garmentsData } from './your-garments-data';
-  // return garmentsData;
-
-  // Option 3: Fallback to mock data if no dataset found
-  console.warn('Dataset bulunamadı, mock veriler kullanılıyor');
-  return mockGarments;
+  
+  // Also generate all expected garments (1-10 for each category) to ensure nothing is missing
+  // This ensures we load all photos even if manifest.json is incomplete
+  for (const category of garmentCategories) {
+    for (let i = 1; i <= 10; i++) {
+      const garmentId = `${category}_${i}`;
+      const filename = `${garmentId}.jpg`;
+      
+      // Check if this garment is already in the list
+      const exists = garments.some(g => g.id === garmentId);
+      
+      if (!exists) {
+        const garment: Garment = {
+          id: garmentId,
+          name: `${category.charAt(0).toUpperCase() + category.slice(1)} ${i}`,
+          category: category,
+          thumbnail: `${DATASET_BASE_PATH}/garment/${category}/${filename}`
+        };
+        garments.push(garment);
+      }
+    }
+  }
+  
+  // Sort by category and then by ID
+  garments.sort((a, b) => {
+    if (a.category !== b.category) {
+      return a.category.localeCompare(b.category);
+    }
+    // Extract number from ID for proper numeric sorting
+    const aNum = parseInt(a.id.split('_')[1] || '0');
+    const bNum = parseInt(b.id.split('_')[1] || '0');
+    return aNum - bNum;
+  });
+  
+  if (garments.length === 0) {
+    console.warn('Hiç kıyafet bulunamadı, mock veriler kullanılıyor');
+    return mockGarments;
+  }
+  
+  return garments;
 };
 
 // Load models from your dataset
-// Expected structure: public/dataset/model/{model_id}.jpg
+// Expected structure: public/dataset/model/{model_id}.png
 export const loadModels = async (): Promise<Model[]> => {
-  // Option 1: Load from manifest.json
   try {
-    const response = await fetch(`${DATASET_BASE_PATH}/manifest.json`);
+    // Load from model manifest.json
+    const response = await fetch(`${DATASET_BASE_PATH}/model/manifest.json`);
     if (response.ok) {
-      const data = await response.json();
-      return data.models || [];
+      const manifest: Record<string, Record<string, string>> = await response.json();
+      const models: Model[] = [];
+      
+      // Check if manifest has models structure or if we need to infer from files
+      // Since we know there are model-1.png, model-2.png, model-3.png files
+      const modelFiles = ['model-1.png', 'model-2.png', 'model-3.png'];
+      
+      for (const filename of modelFiles) {
+        const modelId = filename.replace('.png', ''); // model-1, model-2, model-3
+        const modelNumber = modelId.split('-')[1]; // 1, 2, 3
+        const model: Model = {
+          id: modelId,
+          name: `Model ${modelNumber}`,
+          thumbnail: `${DATASET_BASE_PATH}/model/${filename}`
+        };
+        models.push(model);
+      }
+      
+      return models;
     }
   } catch (error) {
-    console.warn('manifest.json bulunamadı, alternatif yöntem kullanılacak');
+    console.warn('Model manifest.json bulunamadı, dosya sisteminden yükleniyor:', error);
+    
+    // Fallback: Try to load models directly from known files
+    const modelFiles = ['model-1.png', 'model-2.png', 'model-3.png'];
+    const models: Model[] = [];
+    
+    for (const filename of modelFiles) {
+      const modelId = filename.replace('.png', '');
+      const modelNumber = modelId.split('-')[1];
+      const model: Model = {
+        id: modelId,
+        name: `Model ${modelNumber}`,
+        thumbnail: `${DATASET_BASE_PATH}/model/${filename}`
+      };
+      models.push(model);
+    }
+    
+    if (models.length > 0) {
+      return models;
+    }
   }
 
-  // Option 2: Fallback to mock data if no dataset found
+  // Fallback to mock data if no dataset found
   console.warn('Dataset bulunamadı, mock veriler kullanılıyor');
   return mockModels;
 };
@@ -77,6 +160,7 @@ export const getResultImagePath = (
   }
   
   if (category) {
+    // Try .jpg first, then .jpeg (some files might be .jpeg)
     return `${DATASET_BASE_PATH}/result/${vtonModelId}/${normalizedModelId}/${category}/${garmentId}.jpg`;
   }
   
@@ -109,7 +193,7 @@ export const getModelThumbnailPath = (model: Model): string => {
   }
   
   // Otherwise, construct from dataset structure
-  // Expected: /dataset/model/{model_id}.jpg
-  return `${DATASET_BASE_PATH}/model/${model.id}.jpg`;
+  // Expected: /dataset/model/{model_id}.png (models are PNG files)
+  return `${DATASET_BASE_PATH}/model/${model.id}.png`;
 };
 

@@ -117,8 +117,16 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
                 alt={`${vtonModel.name} result`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {
-                  // Fallback to placeholder if image not found
-                  e.currentTarget.src = '/placeholder.svg';
+                  const img = e.currentTarget;
+                  const currentSrc = img.src;
+                  
+                  // If .jpg failed, try .jpeg extension
+                  if (currentSrc.endsWith('.jpg')) {
+                    img.src = currentSrc.replace('.jpg', '.jpeg');
+                  } else {
+                    // Fallback to placeholder if both extensions fail
+                    img.src = '/placeholder.svg';
+                  }
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
