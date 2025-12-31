@@ -65,7 +65,11 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
     );
   }
 
-  const selectedVTONModelData = vtonModels.filter(m => selectedVTONModels.includes(m.id));
+  // Sabit 2x2 grid düzeni: Üst satır (cat, idm), Alt satır (stable_vton, tpd)
+  const gridOrder: VTONModelId[] = ['cat', 'idm', 'stable_vton', 'tpd'];
+  const orderedVTONModels = gridOrder
+    .map(id => vtonModels.find(m => m.id === id))
+    .filter((m): m is typeof vtonModels[number] => m !== undefined && selectedVTONModels.includes(m.id));
 
   return (
     <div className="space-y-6">
@@ -117,19 +121,20 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
         </div>
       </div>
 
-      {/* Results Grid */}
-      <div className={cn(
-        "grid gap-4",
-        selectedVTONModels.length === 1 && "grid-cols-1 max-w-md mx-auto",
-        selectedVTONModels.length === 2 && "grid-cols-2",
-        selectedVTONModels.length >= 3 && "grid-cols-3"
-      )}>
-        {selectedVTONModelData.map((vtonModel, index) => (
-          <div 
-            key={vtonModel.id}
-            className="group bg-card rounded-xl border border-border overflow-hidden animate-slide-up"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
+      {/* Results Grid - 2x2 Layout */}
+      <div className="grid grid-cols-2 gap-3 max-w-xl mx-auto">
+        {gridOrder.map((vtonModelId, index) => {
+          const vtonModel = vtonModels.find(m => m.id === vtonModelId);
+          if (!vtonModel || !selectedVTONModels.includes(vtonModelId)) {
+            return null;
+          }
+          
+          return (
+            <div 
+              key={vtonModel.id}
+              className="group bg-card rounded-xl border border-border overflow-hidden animate-slide-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
             <div className="p-3 border-b border-border bg-muted/30">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">{vtonModel.name}</h3>
@@ -212,7 +217,8 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
               })()}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
