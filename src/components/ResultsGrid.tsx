@@ -1,6 +1,12 @@
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Garment, Model, vtonModels, VTONModelId } from '@/data/mockData';
 import { getResultImagePath, getGarmentThumbnailPath, getModelThumbnailPath } from '@/data/dataset';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface ResultsGridProps {
   garment: Garment | null;
@@ -9,6 +15,28 @@ interface ResultsGridProps {
 }
 
 export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridProps) => {
+  const [openDialog, setOpenDialog] = useState<string | null>(null);
+
+  // Download image function
+  const handleDownload = async (imageUrl: string, filename: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('İndirme hatası:', error);
+      // Fallback: Open in new tab
+      window.open(imageUrl, '_blank');
+    }
+  };
+
   if (!garment || !model) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
@@ -112,33 +140,76 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
               <p className="text-xs text-muted-foreground mt-0.5">{vtonModel.description}</p>
             </div>
             <div className="relative aspect-[2/3] overflow-hidden">
-              <img
-                src={getResultImagePath(garment.id, model.id, vtonModel.id, garment.category)}
-                alt={`${vtonModel.name} result`}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  const currentSrc = img.src;
-                  
-                  // If .jpg failed, try .jpeg extension
-                  if (currentSrc.endsWith('.jpg')) {
-                    img.src = currentSrc.replace('.jpg', '.jpeg');
-                  } else {
-                    // Fallback to placeholder if both extensions fail
-                    img.src = '/placeholder.svg';
-                  }
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-3 left-3 right-3 flex gap-2">
-                  <button className="flex-1 py-2 px-3 rounded-lg bg-primary/90 text-primary-foreground text-xs font-medium hover:bg-primary transition-colors">
-                    Tam Ekran
-                  </button>
-                  <button className="py-2 px-3 rounded-lg bg-secondary/90 text-secondary-foreground text-xs font-medium hover:bg-secondary transition-colors">
-                    İndir
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const imagePath = getResultImagePath(garment.id, model.id, vtonModel.id, garment.category);
+                const filename = `${vtonModel.id}_${garment.id}_${model.id}.jpg`;
+                
+                return (
+                  <>
+                    <img
+                      src={imagePath}
+                      alt={`${vtonModel.name} result`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        const currentSrc = img.src;
+                        
+                        // If .jpg failed, try .jpeg extension
+                        if (currentSrc.endsWith('.jpg')) {
+                          img.src = currentSrc.replace('.jpg', '.jpeg');
+                        } else {
+                          // Fallback to placeholder if both extensions fail
+                          img.src = '/placeholder.svg';
+                        }
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+                        <Dialog open={openDialog === imagePath} onOpenChange={(open) => setOpenDialog(open ? imagePath : null)}>
+                          <DialogTrigger asChild>
+                            <button 
+                              className="flex-1 py-2 px-3 rounded-lg bg-primary/90 text-primary-foreground text-xs font-medium hover:bg-primary transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDialog(imagePath);
+                              }}
+                            >
+                              Tam Ekran
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl w-full p-0 bg-transparent border-0 shadow-none">
+                            <div className="relative w-full bg-background/95 rounded-lg p-4">
+                              <img
+                                src={imagePath}
+                                alt={`${vtonModel.name} - Tam Ekran`}
+                                className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+                                onError={(e) => {
+                                  const img = e.currentTarget;
+                                  const currentSrc = img.src;
+                                  if (currentSrc.endsWith('.jpg')) {
+                                    img.src = currentSrc.replace('.jpg', '.jpeg');
+                                  } else {
+                                    img.src = '/placeholder.svg';
+                                  }
+                                }}
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <button 
+                          className="py-2 px-3 rounded-lg bg-secondary/90 text-secondary-foreground text-xs font-medium hover:bg-secondary transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(imagePath, filename);
+                          }}
+                        >
+                          İndir
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         ))}
