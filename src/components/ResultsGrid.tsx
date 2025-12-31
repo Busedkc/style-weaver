@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
-import { Garment, Model, vtonModels, VTONModelId, generateMockResult } from '@/data/mockData';
+import { Garment, Model, vtonModels, VTONModelId } from '@/data/mockData';
+import { getResultImagePath, getGarmentThumbnailPath, getModelThumbnailPath } from '@/data/dataset';
 
 interface ResultsGridProps {
   garment: Garment | null;
@@ -44,9 +45,15 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
       <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl border border-border">
         <div className="flex items-center gap-3">
           <img 
-            src={garment.thumbnail} 
+            src={getGarmentThumbnailPath(garment)} 
             alt={garment.name}
             className="w-12 h-12 rounded-lg object-cover border border-border"
+            onError={(e) => {
+              // Fallback to original thumbnail if dataset path fails
+              if (e.currentTarget.src !== garment.thumbnail) {
+                e.currentTarget.src = garment.thumbnail;
+              }
+            }}
           />
           <div>
             <p className="text-xs text-muted-foreground">Kıyafet</p>
@@ -58,9 +65,15 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
         </svg>
         <div className="flex items-center gap-3">
           <img 
-            src={model.thumbnail} 
+            src={getModelThumbnailPath(model)} 
             alt={model.name}
             className="w-12 h-12 rounded-lg object-cover border border-border"
+            onError={(e) => {
+              // Fallback to original thumbnail if dataset path fails
+              if (e.currentTarget.src !== model.thumbnail) {
+                e.currentTarget.src = model.thumbnail;
+              }
+            }}
           />
           <div>
             <p className="text-xs text-muted-foreground">Model</p>
@@ -100,9 +113,13 @@ export const ResultsGrid = ({ garment, model, selectedVTONModels }: ResultsGridP
             </div>
             <div className="relative aspect-[2/3] overflow-hidden">
               <img
-                src={generateMockResult(garment.id, model.id, vtonModel.id)}
+                src={getResultImagePath(garment.id, model.id, vtonModel.id, garment.category)}
                 alt={`${vtonModel.name} result`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e) => {
+                  // Fallback to placeholder if image not found
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="absolute bottom-3 left-3 right-3 flex gap-2">

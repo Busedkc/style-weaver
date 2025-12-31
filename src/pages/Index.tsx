@@ -1,14 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GarmentSelector } from '@/components/GarmentSelector';
 import { ModelSelector } from '@/components/ModelSelector';
 import { VTONModelSelector } from '@/components/VTONModelSelector';
 import { ResultsGrid } from '@/components/ResultsGrid';
-import { mockGarments, mockModels, Garment, Model, VTONModelId } from '@/data/mockData';
+import { Garment, Model, VTONModelId } from '@/data/mockData';
+import { loadGarments, loadModels } from '@/data/dataset';
 
 const Index = () => {
+  const [garments, setGarments] = useState<Garment[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
   const [selectedGarment, setSelectedGarment] = useState<Garment | null>(null);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [selectedVTONModels, setSelectedVTONModels] = useState<VTONModelId[]>(['cat']);
+  const [loading, setLoading] = useState(true);
+
+  // Load dataset on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [loadedGarments, loadedModels] = await Promise.all([
+          loadGarments(),
+          loadModels(),
+        ]);
+        setGarments(loadedGarments);
+        setModels(loadedModels);
+      } catch (error) {
+        console.error('Veri yükleme hatası:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleVTONModelToggle = (modelId: VTONModelId) => {
     setSelectedVTONModels(prev => 
@@ -45,52 +68,63 @@ const Index = () => {
       </header>
 
       <main className="container py-8 space-y-8">
-        {/* Selection Panel */}
-        <section className="grid lg:grid-cols-2 gap-6">
-          {/* Left: Garment Selection */}
-          <div className="p-6 rounded-2xl bg-card border border-border">
-            <GarmentSelector
-              garments={mockGarments}
-              selectedGarment={selectedGarment}
-              onSelect={setSelectedGarment}
-            />
-          </div>
-
-          {/* Right: Model & VTON Selection */}
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-card border border-border">
-              <ModelSelector
-                models={mockModels}
-                selectedModel={selectedModel}
-                onSelect={setSelectedModel}
-              />
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Veri seti yükleniyor...</p>
             </div>
+          </div>
+        ) : (
+          <>
+            {/* Selection Panel */}
+            <section className="grid lg:grid-cols-2 gap-6">
+              {/* Left: Garment Selection */}
+              <div className="p-6 rounded-2xl bg-card border border-border">
+                <GarmentSelector
+                  garments={garments}
+                  selectedGarment={selectedGarment}
+                  onSelect={setSelectedGarment}
+                />
+              </div>
+
+              {/* Right: Model & VTON Selection */}
+              <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-card border border-border">
+                  <ModelSelector
+                    models={models}
+                    selectedModel={selectedModel}
+                    onSelect={setSelectedModel}
+                  />
+                </div>
             <div className="p-6 rounded-2xl bg-card border border-border">
               <VTONModelSelector
                 selectedModels={selectedVTONModels}
                 onToggle={handleVTONModelToggle}
               />
             </div>
-          </div>
-        </section>
-
-        {/* Results Section */}
-        <section className="p-6 rounded-2xl bg-card border border-border min-h-[400px]">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">Sonuçlar</h2>
-            {selectedGarment && selectedModel && selectedVTONModels.length > 0 && (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
-                <span className="text-sm text-muted-foreground">Sonuçlar hazır</span>
               </div>
-            )}
-          </div>
-          <ResultsGrid
-            garment={selectedGarment}
-            model={selectedModel}
-            selectedVTONModels={selectedVTONModels}
-          />
-        </section>
+            </section>
+
+            {/* Results Section */}
+            <section className="p-6 rounded-2xl bg-card border border-border min-h-[400px]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-foreground">Sonuçlar</h2>
+                {selectedGarment && selectedModel && selectedVTONModels.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+                    <span className="text-sm text-muted-foreground">Sonuçlar hazır</span>
+                  </div>
+                )}
+              </div>
+              <ResultsGrid
+                garment={selectedGarment}
+                model={selectedModel}
+                selectedVTONModels={selectedVTONModels}
+              />
+            </section>
+          </>
+        )}
       </main>
 
       {/* Footer */}

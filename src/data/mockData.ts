@@ -57,11 +57,12 @@ export const mockModels: Model[] = [
   { id: 'model_3', name: 'Model 3', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=300&fit=crop' },
 ];
 
-// Mock VTON models (AI models to compare)
+// VTON models (AI models to compare)
 export const vtonModels = [
   { id: 'cat', name: 'CAT-VTON', description: 'Category-Aware Transformer' },
-  { id: 'hr_viton', name: 'HR-VITON', description: 'High Resolution VITON' },
-  { id: 'gp_vton', name: 'GP-VTON', description: 'General Purpose VTON' },
+  { id: 'idm', name: 'IDM-VTON', description: 'IDM Virtual Try-On' },
+  { id: 'stable_vton', name: 'Stable-VTON', description: 'Stable Virtual Try-On' },
+  { id: 'tpd', name: 'TPD-VTON', description: 'TPD Virtual Try-On' },
 ] as const;
 
 export type VTONModelId = typeof vtonModels[number]['id'];
